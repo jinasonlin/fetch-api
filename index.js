@@ -4,6 +4,11 @@ import qs from 'qs';
 
 promise.polyfill();
 
+let debug = false;
+if (typeof __DEBUG__ !== 'undefined') {
+  debug = __DEBUG__;
+}
+
 /**
  * API格式
  * {
@@ -161,7 +166,7 @@ const fetchAPI = (options, { checkStatus, parseJSON, middlewares } = {}) => {
     }
   }
 
-  __DEBUG__ && console.debug('fetchAPI', _url, opts);
+  debug && console.debug('fetchAPI', _url, opts);
 
   let _promise = fetch(_url, opts)
     .then(checkStatus || _checkStatus)
@@ -178,16 +183,14 @@ const fetchAPI = (options, { checkStatus, parseJSON, middlewares } = {}) => {
 
   _promise = _promise.then(
     (json) => {
-      __DEBUG__ && console.debug('fetchAPI _promise success');
+      debug && console.debug('fetchAPI _promise success');
       typeof success === 'function' && success(json);
       return json;
     },
     (reason) => {
-      __DEBUG__ && console.debug('fetchAPI _promise fail', reason);
-      return new Promise((resolve, reject) => {
-        typeof error === 'function' && error(reason);
-        reject(reason);
-      });
+      debug && console.debug('fetchAPI _promise fail', reason);
+      typeof error === 'function' && error(reason);
+      return Promise.reject(reason);
     },
   );
 
