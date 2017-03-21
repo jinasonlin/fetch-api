@@ -34,10 +34,10 @@ function _checkStatus(response) {
   }
   const error = new Error(response.statusText);
   error.response = response;
-  throw error;
+  return Promise.reject(error);
 }
 
-function _parseJSON(response) {
+function _parseResponse(response) {
   return response.json();
 }
 
@@ -100,12 +100,12 @@ export const getURL = (...args) => {
 };
 
 /**
- * fetch json accept api
- * json规范接口调用，如非json规范，请使用isomorphic-fetch
+ * fetchAPI
+ * 默认json规范接口调用。如非json规范，可以自行定义中间件，或使用isomorphic-fetch
  * 默认允许跨域请求和cookies跨域携带
  * TODO 增加querystring参数配置
  */
-const fetchAPI = (options, { checkStatus, parseJSON, middlewares } = {}) => {
+const fetchAPI = (options, { checkStatus, parseResponse, middlewares } = {}) => {
   const {
     url,
     server,
@@ -144,7 +144,7 @@ const fetchAPI = (options, { checkStatus, parseJSON, middlewares } = {}) => {
   }
 
   // 配置请求头和请求体
-  if (~['POST', 'PUT'].indexOf(method) && data) {
+  if (~['POST', 'PUT'].indexOf(opts.method) && data) {
     opts.body = data;
   }
   if (!isFormData) {
@@ -158,10 +158,10 @@ const fetchAPI = (options, { checkStatus, parseJSON, middlewares } = {}) => {
     if (headers) {
       opts.headers = Object.assign({}, opts.headers, headers);
     }
-    if (method === 'GET' && data) {
+    if (opts.method === 'GET' && data) {
       const querystring = qs.stringify(data, { arrayFormat: 'repeat' });
       _url = `${URL._url}&${querystring}`.replace(/[&?]{1,2}/, '?');
-    } else if (~['POST', 'PUT'].indexOf(method) && data) {
+    } else if (~['POST', 'PUT'].indexOf(opts.method) && data) {
       opts.body = JSON.stringify(opts.body);
     }
   }
@@ -170,7 +170,7 @@ const fetchAPI = (options, { checkStatus, parseJSON, middlewares } = {}) => {
 
   let _promise = fetch(_url, opts)
     .then(checkStatus || _checkStatus)
-    .then(parseJSON || _parseJSON);
+    .then(parseResponse || _parseResponse);
 
   // 添加中间件
   if (middlewares instanceof Array && middlewares.length) {
@@ -219,11 +219,11 @@ const fetchAPI = (options, { checkStatus, parseJSON, middlewares } = {}) => {
 
 export { fetchAPI };
 
-export const createFetchAPI = ({ checkStatus, parseJSON, middlewares }) => (opts) => {
+export const createFetchAPI = ({ options = {}, checkStatus, parseJSON, middlewares } = {}) => (opts) => {
   if (!(middlewares instanceof Array)) {
     middlewares = [middlewares];
   }
-  return fetchAPI(opts, { checkStatus, parseJSON, middlewares });
+  return fetchAPI(Object.assign({}, options, opts), { checkStatus, parseJSON, middlewares });
 };
 
 // default fetch
